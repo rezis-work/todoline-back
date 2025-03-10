@@ -8,7 +8,7 @@ export async function handleTasksRoutes(req, res) {
 
     if (req.method === "GET" && req.url.startsWith("/tasks")) {
       const urlParams = new URL(req.url, `http://${req.headers.host}`);
-      const filter = {};
+      const filter = { userId: req.user.userId };
 
       if (urlParams.searchParams.has("completed")) {
         filter.completed = urlParams.searchParams.get("completed") === "true";
@@ -31,6 +31,10 @@ export async function handleTasksRoutes(req, res) {
       });
       req.on("end", async () => {
         const newTask = JSON.parse(body);
+        if (!newTask.task) {
+          throw new Error("Task is required");
+        }
+        newTask.userId = req.user.userId;
         const result = await taskCollection.insertOne(newTask);
         res.writeHead(201, {
           "Content-Type": "application/json",
@@ -63,7 +67,7 @@ export async function handleTasksRoutes(req, res) {
       req.on("end", async () => {
         const updates = JSON.parse(body);
         const result = await taskCollection.updateOne(
-          { _id: new ObjectId(taskId) },
+          { _id: new ObjectId(taskId), userId: req.user.userId },
           { $set: updates }
         );
 
@@ -95,6 +99,7 @@ export async function handleTasksRoutes(req, res) {
 
       const result = await taskCollection.deleteOne({
         _id: new ObjectId(taskId),
+        userId: req.user.userId,
       });
 
       if (result.deletedCount === 0) {

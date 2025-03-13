@@ -4,7 +4,8 @@ import { handleTasksRoutes } from "./routes/tasks.js";
 import { connectDB } from "./db/db.js";
 import { handleAuthRoutes } from "./routes/auth.js";
 import { authenticate } from "./middleware/authMiddleware.js";
-import { generalLimiter } from "./middleware/rateLimiter.js";
+import { rateLimiter } from "./middleware/rateLimiter.js";
+import { logInfo } from "./utils/logger.js";
 
 dotenv.config();
 
@@ -15,12 +16,25 @@ async function startServer() {
 
   const server = http.createServer((req, res) => {
     if (req.url.startsWith("/auth")) {
-      authLimiter(req, res, () => handleAuthRoutes(req, res));
+      rateLimiter(
+        req,
+        res,
+        () => handleAuthRoutes(req, res),
+        30,
+        15 * 60 * 1000
+      );
     } else {
-      generalLimiter(req, res, () => {
-        authenticate(req, res, () => {
-          handleTasksRoutes(req, res);
-        });
+      rateLimiter(req, res, () => {
+        authenticate(
+          req,
+          res,
+          () => {
+            logInfo(`User ${req.user.username} accessed ${req.url}`);
+            handleTasksRoutes(req, res);
+          },
+          60,
+          60 * 1000
+        );
       });
     }
   });

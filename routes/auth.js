@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { sendResetEmail } from "../utils/email.js";
 import crypto from "crypto";
+import { logInfo } from "../utils/logger.js";
 
 dotenv.config();
 
@@ -90,6 +91,7 @@ export async function handleAuthRoutes(req, res) {
           { expiresIn: "1h" }
         );
 
+        logInfo(`User ${user.username} logged in`);
         res.writeHead(200, {
           "Content-Type": "application/json",
           "Cache-Control": "no-cache",
@@ -102,6 +104,7 @@ export async function handleAuthRoutes(req, res) {
           })
         );
       } catch (error) {
+        logError(`Error logging in user ${user.username}: ${error.message}`);
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ message: error.message }));
       }

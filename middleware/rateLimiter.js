@@ -1,13 +1,31 @@
-import rateLimit from "express-rate-limit";
+const rateLimitStore = new Map();
 
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { error: "Too many requests, please try again Later" },
-});
+export function rateLimiter(req, res, next, limit, windowMs) {
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  const now = Date.now();
 
-export const generalLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests, please try again Later" },
-});
+  if (!rateLimitStore.has(ip)) {
+    rateLimitStore.set(ip, []);
+  }
+
+  const timeStamps = rateLimitStore.get(ip);
+  rateLimitStore.set(
+    ip,
+    timeStamps.filter((timeStamp) => now - timeStamp < windowMs)
+  );
+
+  if (timeStamps.length >= limit) {
+    res.writeHead(429, {
+      "Content-Type": "application/json",
+    });
+    res.end(
+      JSON.stringify({
+        error: "Too many requests, please try again later",
+      })
+    );
+    return;
+  }
+
+  timeStamps.push(now);
+  next();
+}

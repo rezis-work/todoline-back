@@ -8,7 +8,8 @@ export async function handleTasksRoutes(req, res) {
 
     if (req.method === "GET" && req.url.startsWith("/tasks")) {
       const urlParams = new URL(req.url, `http://${req.headers.host}`);
-      const filter = { userId: req.user.userId };
+      const filter =
+        req.user.role === "admin" ? {} : { userId: req.user.userId };
 
       if (urlParams.searchParams.has("completed")) {
         filter.completed = urlParams.searchParams.get("completed") === "true";
@@ -66,10 +67,13 @@ export async function handleTasksRoutes(req, res) {
       });
       req.on("end", async () => {
         const updates = JSON.parse(body);
-        const result = await taskCollection.updateOne(
-          { _id: new ObjectId(taskId), userId: req.user.userId },
-          { $set: updates }
-        );
+        const filter =
+          req.user.role === "admin"
+            ? { _id: new ObjectId(taskId) }
+            : { _id: new ObjectId(taskId), userId: req.user.userId };
+        const result = await taskCollection.updateOne(filter, {
+          $set: updates,
+        });
 
         if (result.matchedCount === 0) {
           res.writeHead(404, {
@@ -97,10 +101,12 @@ export async function handleTasksRoutes(req, res) {
         return;
       }
 
-      const result = await taskCollection.deleteOne({
-        _id: new ObjectId(taskId),
-        userId: req.user.userId,
-      });
+      const filter =
+        req.user.role === "admin"
+          ? { _id: new ObjectId(taskId) }
+          : { _id: new ObjectId(taskId), userId: req.user.userId };
+
+      const result = await taskCollection.deleteOne(filter);
 
       if (result.deletedCount === 0) {
         res.writeHead(404, {

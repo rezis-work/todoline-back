@@ -2,6 +2,8 @@ import { getDB } from "../db/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { sendResetEmail } from "../utils/email.js";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -102,6 +104,85 @@ export async function handleAuthRoutes(req, res) {
       } catch (error) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ message: error.message }));
+      }
+    });
+  } else if (req.method === "POST" && req.url === "/auth/request-reset") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", async () => {
+      try {
+        const { email } = JSON.parse(body);
+        if (!email) {
+          throw new Error("Email is required");
+        }
+
+        const user = await userCollection.findOne({ email });
+        if (!user) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ message: "User not found" }));
+          return;
+        }
+
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const resetTokenExpiry = Date.now() + 3600000; // 1 hour from now
+
+        await userCollection.updateOne(
+          { email },
+          { $set: { resetToken, resetTokenExpiry } }
+        );
+
+        await sendResetEmail(email, resetToken);
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Reset email sent" }));
+      } catch (error) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: error.message }));
+      }
+    });
+  } else if (
+    req.method === "POST" &&
+    req.url.startsWith("/auth/reset-password")
+  ) {
+    const urlParams = new URL(req.url, `http://${req.headers.host}`);
+    const token = urlParams.searchParams.get("token");
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", async () => {
+      try {
+        const { newPassword } = JSON.parse(body);
+        if (!token || !newPassword) {
+          throw new Error("All fields are required");
+        }
+
+        const user = await userCollection.findOne({ resetToken: token });
+        if (!user || user.resetTokenExpiry < Date.now()) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ message: "Invalid or expired token" }));
+          return;
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await userCollection.updateOne(
+          { email: user.email },
+          {
+            $set: {
+              password: hashedPassword,
+              resetToken: null,
+              resetTokenExpiry: null,
+            },
+          }
+        );
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Password reset successful" }));
+      } catch (err) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: err.message }));
       }
     });
   } else {

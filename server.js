@@ -6,7 +6,7 @@ import { handleAuthRoutes } from "./routes/auth.js";
 import { authenticate } from "./middleware/authMiddleware.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { logInfo } from "./utils/logger.js";
-
+import { handleProfileRoutes } from "./routes/profile.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
@@ -30,7 +30,11 @@ async function startServer() {
           res,
           () => {
             logInfo(`User ${req.user.username} accessed ${req.url}`);
-            handleTasksRoutes(req, res);
+            if (req.url.startsWith("/profile")) {
+              handleProfileRoutes(req, res);
+            } else {
+              handleTasksRoutes(req, res);
+            }
           },
           60,
           60 * 1000

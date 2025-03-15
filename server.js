@@ -9,6 +9,7 @@ import { logInfo } from "./utils/logger.js";
 import { handleProfileRoutes } from "./routes/profile.js";
 import { handleRandomUsersRoutes } from "./routes/randomUsers.js";
 import { handleCors } from "./middleware/cors.js";
+import { handleAdminRoutes } from "./routes/adminRoutes.js";
 
 dotenv.config();
 
@@ -38,6 +39,8 @@ async function startServer() {
               handleProfileRoutes(req, res);
             } else if (req.url.startsWith("/users/random")) {
               handleRandomUsersRoutes(req, res);
+            } else if (req.url.startsWith("/users/")) {
+              handleAdminRoutes(req, res);
             } else {
               handleTasksRoutes(req, res);
             }

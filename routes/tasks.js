@@ -10,7 +10,9 @@ export async function handleTasksRoutes(req, res) {
     if (req.method === "GET" && req.url.startsWith("/tasks")) {
       const urlParams = new URL(req.url, `http://${req.headers.host}`);
       const sortOrder = urlParams.searchParams.get("sort") === "asc" ? 1 : -1;
-      const cacheKey = `tasks_${req.user.userId}_sort_${sortOrder}`;
+      const completed = urlParams.searchParams.get("completed") || "all";
+      const priority = urlParams.searchParams.get("priority") || "all";
+      const cacheKey = `tasks_${req.user.userId}_sort_${sortOrder}_completed_${completed}_priority_${priority}`;
       const cachedTasks = getCache(cacheKey);
 
       if (cachedTasks) {

@@ -19,7 +19,14 @@ export async function handleTasksRoutes(req, res) {
         filter.priority = parseInt(urlParams.searchParams.get("priority"), 10);
       }
       // **************************
-      const tasks = await taskCollection.find(filter).toArray();
+      const tasks = await taskCollection
+        .find(filter)
+        .project({
+          title: 1,
+          completed: 1,
+          priority: 1,
+        })
+        .toArray();
       res.writeHead(200, {
         "Content-Type": "application/json",
         "Cache-Control": "no-cache",

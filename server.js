@@ -7,6 +7,9 @@ import { authenticate } from "./middleware/authMiddleware.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { logInfo } from "./utils/logger.js";
 import { handleProfileRoutes } from "./routes/profile.js";
+import { handleRandomUsersRoutes } from "./routes/randomUsers.js";
+import { handleCors } from "./middleware/cors.js";
+
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
@@ -15,6 +18,7 @@ async function startServer() {
   await connectDB();
 
   const server = http.createServer((req, res) => {
+    if (handleCors(req, res)) return;
     if (req.url.startsWith("/auth")) {
       rateLimiter(
         req,
@@ -32,6 +36,8 @@ async function startServer() {
             logInfo(`User ${req.user.username} accessed ${req.url}`);
             if (req.url.startsWith("/profile")) {
               handleProfileRoutes(req, res);
+            } else if (req.url.startsWith("/users/random")) {
+              handleRandomUsersRoutes(req, res);
             } else {
               handleTasksRoutes(req, res);
             }

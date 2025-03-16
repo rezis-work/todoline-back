@@ -29,11 +29,11 @@ async function startServer() {
         15 * 60 * 1000
       );
     } else {
-      rateLimiter(req, res, () => {
-        authenticate(
-          req,
-          res,
-          () => {
+      rateLimiter(
+        req,
+        res,
+        () => {
+          authenticate(req, res, () => {
             logInfo(`User ${req.user.username} accessed ${req.url}`);
             if (req.url.startsWith("/profile")) {
               handleProfileRoutes(req, res);
@@ -44,11 +44,11 @@ async function startServer() {
             } else {
               handleTasksRoutes(req, res);
             }
-          },
-          60,
-          60 * 1000
-        );
-      });
+          });
+        },
+        5,
+        60 * 1000
+      );
     }
   });
 

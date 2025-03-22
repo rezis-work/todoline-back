@@ -46,7 +46,7 @@ async function startServer() {
             }
           });
         },
-        5,
+        50,
         60 * 1000
       );
     }

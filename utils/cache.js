@@ -20,3 +20,11 @@ export function getCache(key) {
 export function invalidateCache(key) {
   cache.delete(key);
 }
+
+export function invalidateUserTaskCache(userId) {
+  for (const key of cache.keys()) {
+    if (key.startsWith(`tasks_${userId}`)) {
+      cache.delete(key);
+    }
+  }
+}
